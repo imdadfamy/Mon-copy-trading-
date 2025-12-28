@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Connexion / Inscription - CopyTrader</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white flex items-center justify-center h-screen">
+    <div class="bg-gray-800 p-8 rounded-lg shadow-2xl w-96 border border-blue-500">
+        <h2 class="text-3xl font-bold mb-6 text-center text-blue-400">CopyTrader AI</h2>
+        
+        <div id="login-form">
+            <h3 class="text-xl mb-4 text-center">Se connecter</h3>
+            <form action="/login" method="post" class="space-y-4">
+                <input type="email" name="email" placeholder="Email" required class="w-full p-2 bg-gray-700 rounded border border-gray-600 outline-none focus:border-blue-500">
+                <input type="password" name="password" placeholder="Mot de passe" required class="w-full p-2 bg-gray-700 rounded border border-gray-600 outline-none focus:border-blue-500">
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 py-2 rounded font-bold">Connexion</button>
+            </form>
+            <p class="text-sm mt-4 text-center">Pas de compte ? <a href="#" onclick="toggleForm()" class="text-blue-400 hover:underline">S'inscrire</a></p>
+        </div>
+
+        <div id="register-form" class="hidden">
+            <h3 class="text-xl mb-4 text-center">Créer un compte</h3>
+            <form action="/register" method="post" class="space-y-4">
+                <input type="email" name="email" placeholder="Email" required class="w-full p-2 bg-gray-700 rounded border border-gray-600 outline-none focus:border-green-500">
+                <input type="password" name="password" placeholder="Mot de passe" required class="w-full p-2 bg-gray-700 rounded border border-gray-600 outline-none focus:border-green-500">
+                <button type="submit" class="w-full bg-green-600 hover:bg-green-700 py-2 rounded font-bold">S'inscrire</button>
+            </form>
+            <p class="text-sm mt-4 text-center">Déjà inscrit ? <a href="#" onclick="toggleForm()" class="text-blue-400 hover:underline">Se connecter</a></p>
+        </div>
+    </div>
+
+    <script>
+        function toggleForm() {
+            document.getElementById('login-form').classList.toggle('hidden');
+            document.getElementById('register-form').classList.toggle('hidden');
+        }
+    </script>
+</body>
+</html>

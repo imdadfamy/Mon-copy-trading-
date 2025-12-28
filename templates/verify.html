@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Vérification Telegram</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white flex items-center justify-center h-screen">
+    <div class="bg-gray-800 p-8 rounded-lg shadow-2xl w-96 border border-blue-500">
+        <h2 class="text-2xl font-bold mb-6 text-center text-blue-400">Code de vérification</h2>
+        <p class="text-sm text-gray-400 mb-4 text-center">Entrez le code envoyé sur votre application Telegram.</p>
+        <form action="/verify-telegram" method="post" class="space-y-4">
+            <input type="hidden" name="phone" value="{{ phone }}">
+            <input type="hidden" name="user_id" value="{{ user_id }}">
+            <input type="text" name="code" placeholder="Ex: 12345" required class="w-full p-2 bg-gray-700 rounded border border-gray-600 outline-none focus:border-blue-500 text-center text-xl tracking-widest">
+            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 py-2 rounded font-bold">Vérifier</button>
+        </form>
+    </div>
+</body>
+</html>

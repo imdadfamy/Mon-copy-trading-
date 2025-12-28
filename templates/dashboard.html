@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard - CopyTrader AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .tab-active { border-bottom: 3px solid #3b82f6; color: #3b82f6; }
+    </style>
+</head>
+<body class="bg-gray-900 text-white font-sans">
+    <nav class="bg-gray-800 p-4 border-b border-blue-500">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-blue-400">CopyTrader AI</h1>
+            <a href="/" class="text-sm bg-red-600 hover:bg-red-700 px-3 py-1 rounded transition">Déconnexion</a>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4 py-10">
+        <div class="flex justify-between items-center mb-8">
+            <h2 class="text-3xl">Espace de Trading #{{ user_id }}</h2>
+            
+            <form action="/toggle-bot" method="post" class="flex items-center space-x-4 bg-gray-800 p-3 rounded-xl border border-gray-700">
+                <input type="hidden" name="user_id" value="{{ user_id }}">
+                <span class="text-sm font-bold {% if bot_est_actif %} text-green-400 {% else %} text-red-400 {% endif %}">
+                    STATUT : {% if bot_est_actif %} ACTIF {% else %} INACTIF {% endif %}
+                </span>
+                <button type="submit" class="px-6 py-2 rounded-lg font-bold transition transform active:scale-95 shadow-lg
+                    {% if bot_est_actif %} bg-red-600 hover:bg-red-700 {% else %} bg-green-600 hover:bg-green-700 {% endif %}">
+                    {% if bot_est_actif %} ARRÊTER LE BOT {% else %} DÉMARRER LE BOT {% endif %}
+                </button>
+            </form>
+        </div>
+
+        <div class="flex space-x-8 border-b border-gray-700 mb-8">
+            <button onclick="switchTab('connexions')" id="btn-connexions" class="tab-btn pb-4 font-bold tab-active">🔗 Connexions</button>
+            <button onclick="switchTab('parametres')" id="btn-parametres" class="tab-btn pb-4 font-bold text-gray-400 hover:text-white transition">⚙️ Paramètres</button>
+            <button onclick="switchTab('bilan')" id="btn-bilan" class="tab-btn pb-4 font-bold text-gray-400 hover:text-white transition">📊 Bilan (Stats)</button>
+        </div>
+
+        <div id="tab-connexions" class="tab-content grid grid-cols-1 md:grid-cols-2 gap-8">
+            
+            <div class="bg-gray-800 p-6 rounded-xl shadow-lg border-t-4 border-blue-500">
+                <h3 class="text-xl font-bold mb-4 flex items-center justify-between">
+                    <span>📱 Telegram</span>
+                    {% if telegram_lie %}
+                        <span class="text-xs bg-green-900 text-green-300 px-2 py-1 rounded">DÉJÀ LIÉ ✅</span>
+                    {% endif %}
+                </h3>
+                
+                {% if telegram_lie %}
+                <div class="bg-blue-900/20 border border-blue-500/30 p-3 rounded-lg mb-4 text-sm text-blue-200">
+                    Votre compte est lié. Entrez un numéro pour ajouter un canal ou changer de compte.
+                </div>
+                {% endif %}
+
+                <form action="/connect-telegram" method="post" class="space-y-4">
+                    <input type="hidden" name="user_id" value="{{ user_id }}">
+                    <input type="text" name="phone" placeholder="Ex: +2250102030405" required
+                           class="w-full p-2 bg-gray-700 rounded border border-gray-600 outline-none focus:border-blue-500">
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 py-2 rounded font-bold transition">
+                        {% if telegram_lie %} ➕ Lier un autre compte {% else %} Lier mon Telegram {% endif %}
+                    </button>
+                </form>
+            </div>
+
+            <div class="bg-gray-800 p-6 rounded-xl shadow-lg border-t-4 border-green-500">
+                <h3 class="text-xl font-bold mb-4 flex items-center justify-between">
+                    <span>📈 Compte MT5</span>
+                    {% if mt5_lie %}
+                        <span class="text-xs bg-green-900 text-green-300 px-2 py-1 rounded">CONFIGURÉ</span>
+                    {% endif %}
+                </h3>
+                
+                <form action="/save-mt5" method="post" class="space-y-3" autocomplete="off">
+                    <input type="hidden" name="user_id" value="{{ user_id }}">
+                    
+                    <input type="text" name="mt5_login" placeholder="Numéro de compte MT5" required
+                           class="w-full p-2 bg-gray-700 rounded border border-gray-600 outline-none focus:border-green-500"
+                           autocomplete="one-time-code">
+                    
+                    <input type="password" name="mt5_password" placeholder="Mot de passe" required
+                           class="w-full p-2 bg-gray-700 rounded border border-gray-600 outline-none focus:border-green-500"
+                           autocomplete="new-password">
+                    
+                    <input type="text" name="mt5_server" placeholder="Serveur (ex: ICVM-Demo)" required
+                           class="w-full p-2 bg-gray-700 rounded border border-gray-600 outline-none focus:border-green-500">
+                    
+                    <button type="submit" class="w-full bg-green-600 hover:bg-green-700 py-2 rounded font-bold transition">
+                        {% if mt5_lie %} ⚙️ Modifier mon compte MT5 {% else %} Enregistrer MT5 {% endif %}
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div id="tab-parametres" class="tab-content hidden">
+            <div class="bg-gray-800 p-8 rounded-xl shadow-lg border-t-4 border-yellow-500 max-w-2xl mx-auto">
+                <h3 class="text-2xl font-bold mb-6 text-yellow-500">Gestion du Risque</h3>
+                <form action="/save-settings" method="post" class="space-y-6">
+                    <input type="hidden" name="user_id" value="{{ user_id }}">
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-2">Taille du Lot Fixe (0.01 à 100.0)</label>
+                        <input type="number" name="lot" step="0.01" value="{{ lot_actuel or 0.01 }}" required
+                               class="w-full p-3 bg-gray-900 rounded border border-gray-700 outline-none focus:border-yellow-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-2">Maximum de trades par jour</label>
+                        <input type="number" name="max_trades" value="{{ max_actuel or 5 }}" required
+                               class="w-full p-3 bg-gray-900 rounded border border-gray-700 outline-none focus:border-yellow-500">
+                    </div>
+                    <button type="submit" class="w-full bg-yellow-600 hover:bg-yellow-700 py-3 rounded-xl font-bold transition">Sauvegarder les réglages</button>
+                </form>
+            </div>
+        </div>
+
+        <div id="tab-bilan" class="tab-content hidden">
+            <div class="bg-gray-800 p-6 rounded-xl shadow-lg border-t-4 border-purple-500">
+                <h3 class="text-2xl font-bold mb-6 text-purple-500 text-center">Historique des Gains / Pertes</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="text-gray-400 border-b border-gray-700">
+                                <th class="p-4">Symbole</th>
+                                <th class="p-4">Type</th>
+                                <th class="p-4">Lot</th>
+                                <th class="p-4">Profit ($)</th>
+                                <th class="p-4">Date</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-700">
+                            {% if trades %}
+                                {% for trade in trades %}
+                                <tr class="hover:bg-gray-700/50">
+                                    <td class="p-4 font-bold">{{ trade[0] }}</td>
+                                    <td class="p-4 {{ 'text-green-400' if trade[1] == 'BUY' else 'text-red-400' }}">{{ trade[1] }}</td>
+                                    <td class="p-4">{{ trade[2] }}</td>
+                                    <td class="p-4 {{ 'text-green-400' if trade[3] >= 0 else 'text-red-400' }}">
+                                        {{ "+" if trade[3] >= 0 }}{{ trade[3] }}
+                                    </td>
+                                    <td class="p-4 text-sm text-gray-500">{{ trade[4] }}</td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr><td colspan="5" class="p-8 text-center text-gray-500 italic">Aucun trade enregistré.</td></tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Gestion des onglets
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(el => {
+                el.classList.remove('tab-active');
+                el.classList.add('text-gray-400');
+            });
+            document.getElementById('tab-' + tabName).classList.remove('hidden');
+            document.getElementById('btn-' + tabName).classList.add('tab-active');
+            document.getElementById('btn-' + tabName).classList.remove('text-gray-400');
+        }
+
+        // Script pour afficher une alerte si l'URL contient un message d'erreur
+        window.onload = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('error')) {
+                alert("❌ Erreur : " + urlParams.get('error'));
+            }
+        };
+    </script>
+</body>
+</html>
