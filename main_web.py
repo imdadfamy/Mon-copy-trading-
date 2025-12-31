@@ -13,14 +13,22 @@ from fastapi.responses import RedirectResponse
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 
-# --- CONFIGURATION ---
-DB_CONFIG = {
-    "dbname": "copytrader_db",
-    "user": "imdade_user",
-    "password": "ton_mot_de_pass_ici", 
-    "host": "localhost",
-    "port": "5432"
-}
+# --- CONFIGURATION BASE DE DONNÉES ---
+DATABASE_URL = os.getenv('DATABASE_URL')
+
+def get_db_connection():
+    if DATABASE_URL:
+        # Connexion pour Railway (Cloud)
+        return psycopg2.connect(DATABASE_URL, sslmode='require')
+    else:
+        # Connexion pour ton ThinkPad (Local)
+        return psycopg2.connect(
+            dbname="copytrader_db",
+            user="imdade_user",
+            password="ton_mot_de_pass_ici", 
+            host="localhost",
+            port="5432"
+        )
 
 API_ID = 30882701
 API_HASH = 'ce3413ef77f883d43cc2629addb54790'
