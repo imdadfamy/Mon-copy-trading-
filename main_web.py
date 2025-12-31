@@ -52,7 +52,7 @@ async def inscrire_client_metaapi(user_id, login, password, server):
         "application": "MetaApi",
         "magic": 1000
     }
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=30.0)as client:
         response = await client.post(url, json=data, headers=headers)
         print(f"🔍 DEBUG METAAPI: Status {response.status_code} - Body: {response.text}") # Affiche l'erreur exacte
         if response.status_code in [200, 201]:
