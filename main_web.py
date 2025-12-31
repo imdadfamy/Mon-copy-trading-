@@ -1,3 +1,4 @@
+import os
 import uvicorn
 from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse
@@ -289,5 +290,10 @@ async def save_sources(request: Request, user_id: int = Form(...)):
     except Exception as e:
         print(f"💥 Erreur Save Sources : {e}")
         return render_user_dashboard(request, user_id, f"Erreur sources : {e}")
+
+
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    # Railway définit automatiquement une variable d'environnement PORT
+    port = int(os.environ.get("PORT", 8000)) 
+    # Utilise host="0.0.0.0" pour être accessible depuis l'extérieur
+    uvicorn.run(app, host="0.0.0.0", port=port)
