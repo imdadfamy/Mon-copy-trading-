@@ -72,3 +72,18 @@ async def fermer_toutes_positions(account_id, symbol=None):
     except Exception as e:
         print(f"❌ Erreur critique dans fermer_toutes_positions : {e}")
         return False
+# À la fin de trading_engine.py, tout à gauche :
+async def modifier_sl_position(account_id, position_id, nouveau_sl):
+    api_meta = MetaApi(API_TOKEN)
+    try:
+        account = await api_meta.metatrader_account_api.get_account(account_id)
+        connection = account.get_rpc_connection()
+        await connection.connect()
+        await connection.wait_synchronized()
+        
+        # On utilise le nom d'argument exact pour éviter l'erreur 'value'
+        await connection.modify_position(str(position_id), stop_loss=float(nouveau_sl))
+        return True
+    except Exception as e:
+        print(f"❌ Erreur modif SL : {e}")
+        return False

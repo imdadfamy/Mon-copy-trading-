@@ -7,6 +7,7 @@ import httpx
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 from typing import List
+from fastapi.responses import RedirectResponse
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
@@ -30,12 +31,8 @@ clients_en_attente = {}
 
 # --- LOGIQUE CLOUD METAAPI ---
 async def inscrire_client_metaapi(user_id, login, password, server):
-    """Enregistre le compte sur le Cloud MetaApi et renvoie l'ID"""
     url = "https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai/users/current/accounts"
-    headers = {
-        "auth-token": META_API_TOKEN,
-        "Content-Type": "application/json"
-    }
+    headers = {"auth-token": META_API_TOKEN, "Content-Type": "application/json"}
     data = {
         "name": f"Client_{user_id}",
         "type": "cloud",
@@ -47,13 +44,11 @@ async def inscrire_client_metaapi(user_id, login, password, server):
         "magic": 1000
     }
     async with httpx.AsyncClient() as client:
-        try:
-            response = await client.post(url, json=data, headers=headers)
-            if response.status_code in [200, 201]:
-                return response.json()['id']
-            return None
-        except Exception:
-            return None
+        response = await client.post(url, json=data, headers=headers)
+        print(f"🔍 DEBUG METAAPI: Status {response.status_code} - Body: {response.text}") # Affiche l'erreur exacte
+        if response.status_code in [200, 201]:
+            return response.json()['id']
+        return None
 
 # --- FONCTION UTILITAIRE : CHARGER LE DASHBOARD ---
 def render_user_dashboard(request, user_id, error_msg: str = None):
@@ -88,11 +83,48 @@ def render_user_dashboard(request, user_id, error_msg: str = None):
     })
 
 # --- ROUTES D'AUTHENTIFICATION ---
-
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
+    """Redirige l'accueil vers l'inscription"""
     return templates.TemplateResponse("register.html", {"request": request})
 
+@app.get("/register", response_class=HTMLResponse)
+async def show_register(request: Request):
+    """Affiche la page d'inscription"""
+    return templates.TemplateResponse("register.html", {"request": request})
+
+@app.get("/login", response_class=HTMLResponse)
+async def show_login(request: Request):
+    """Affiche la page de connexion"""
+    return templates.TemplateResponse("login.html", {"request": request})
+
+@app.post("/register")
+async def register(request: Request):
+    """Crée l'utilisateur et ses réglages par défaut"""
+    try:
+        data = await request.form()
+        email = data.get("email")
+        password = data.get("password")
+        
+        with psycopg2.connect(**DB_CONFIG) as conn:
+            with conn.cursor() as cur:
+                # Insertion Email/MDP uniquement
+                cur.execute(
+                    "INSERT INTO utilisateurs (email, mot_de_passe) VALUES (%s, %s) RETURNING id",
+                    (email, password)
+                )
+                new_user_id = cur.fetchone()[0]
+                
+                # Création des réglages (essentiel pour le bot)
+                cur.execute(
+                    "INSERT INTO reglages_trading (user_id, lot_fixe, bot_actif) VALUES (%s, 0.01, FALSE)",
+                    (new_user_id,)
+                )
+                conn.commit()
+        return RedirectResponse(url="/login", status_code=303)
+    except Exception as e:
+        print(f"❌ Erreur Inscription: {e}")
+        return templates.TemplateResponse("register.html", {"request": request, "error_msg": "Email déjà utilisé."})
 @app.post("/login")
 async def login(request: Request, email: str = Form(...), password: str = Form(...)):
     conn = psycopg2.connect(**DB_CONFIG)
@@ -225,18 +257,37 @@ async def toggle_bot(request: Request, user_id: int = Form(...)):
     return render_user_dashboard(request, user_id)
 
 @app.post("/save-sources")
-async def save_sources(request: Request, user_id: int = Form(...), selected_channels: List[str] = Form(...)):
+async def save_sources(request: Request, user_id: int = Form(...)):
     try:
+        data = await request.form()
+        # Récupère tous les éléments cochés nommés "selected_channels"
+        channels = data.getlist("selected_channels")
+        
+        if not channels:
+            return render_user_dashboard(request, user_id, "Aucun canal sélectionné.")
+
         conn = psycopg2.connect(**DB_CONFIG)
         cur = conn.cursor()
-        for entry in selected_channels:
-            canal_id, canal_name = entry.split('|')
-            cur.execute("INSERT INTO sources (user_id, canal_id, nom_canal) VALUES (%s, %s, %s)", (user_id, canal_id, canal_name))
+        
+        # 1. On vide les anciennes sources pour éviter les conflits
+        cur.execute("DELETE FROM sources WHERE user_id = %s", (user_id,))
+        
+        # 2. On insère les nouvelles sources
+        for entry in channels:
+            if '|' in entry:
+                canal_id, canal_name = entry.split('|', 1)
+                cur.execute(
+                    "INSERT INTO sources (user_id, canal_id, nom_canal) VALUES (%s, %s, %s)",
+                    (user_id, canal_id, canal_name)
+                )
+        
         conn.commit()
         cur.close(); conn.close()
+        print(f"✅ Sources mises à jour pour l'utilisateur {user_id}")
         return render_user_dashboard(request, user_id)
-    except Exception as e: 
+        
+    except Exception as e:
+        print(f"💥 Erreur Save Sources : {e}")
         return render_user_dashboard(request, user_id, f"Erreur sources : {e}")
-
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8000)
