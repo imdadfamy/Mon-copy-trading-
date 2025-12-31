@@ -61,7 +61,7 @@ async def inscrire_client_metaapi(user_id, login, password, server):
 
 # --- FONCTION UTILITAIRE : CHARGER LE DASHBOARD ---
 def render_user_dashboard(request, user_id, error_msg: str = None):
-    conn = psycopg2.connect(**DB_CONFIG)
+    conn = get_db_connection()
     cur = conn.cursor()
     
     cur.execute("SELECT id FROM sessions_telegram WHERE user_id = %s", (user_id,))
@@ -114,8 +114,8 @@ async def register(request: Request):
         data = await request.form()
         email = data.get("email")
         password = data.get("password")
-        
-        with psycopg2.connect(**DB_CONFIG) as conn:
+
+        with get_db_connection() as conn:
             with conn.cursor() as cur:
                 # Insertion Email/MDP uniquement
                 cur.execute(
@@ -136,7 +136,7 @@ async def register(request: Request):
         return templates.TemplateResponse("register.html", {"request": request, "error_msg": "Email déjà utilisé."})
 @app.post("/login")
 async def login(request: Request, email: str = Form(...), password: str = Form(...)):
-    conn = psycopg2.connect(**DB_CONFIG)
+    conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("SELECT id FROM utilisateurs WHERE email = %s AND mot_de_passe = %s", (email, password))
     user = cur.fetchone()
@@ -157,7 +157,7 @@ async def save_mt5(request: Request, user_id: int = Form(...), mt5_login: str = 
 
     # 2. Sauvegarde PostgreSQL avec Commit
     try:
-        conn = psycopg2.connect(**DB_CONFIG)
+        conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
             INSERT INTO comptes_mt5 (user_id, mt5_login, mt5_password, mt5_server, metaapi_account_id) 
@@ -208,7 +208,7 @@ async def verify_telegram(request: Request, phone: str = Form(...), code: str = 
         session_str = client.session.save()
         print("✅ Session Telegram validée et sauvegardée.")
 
-        conn = psycopg2.connect(**DB_CONFIG)
+        conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
             INSERT INTO sessions_telegram (user_id, phone, string_session) 
@@ -235,7 +235,7 @@ async def verify_telegram(request: Request, phone: str = Form(...), code: str = 
 @app.post("/save-settings")
 async def save_settings(request: Request, user_id: int = Form(...), lot: float = Form(...), max_trades: int = Form(...)):
     try:
-        conn = psycopg2.connect(**DB_CONFIG)
+        conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
             INSERT INTO reglages_trading (user_id, lot_fixe, max_trades_jour) 
@@ -251,7 +251,7 @@ async def save_settings(request: Request, user_id: int = Form(...), lot: float =
 
 @app.post("/toggle-bot")
 async def toggle_bot(request: Request, user_id: int = Form(...)):
-    conn = psycopg2.connect(**DB_CONFIG)
+    conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("SELECT bot_actif FROM reglages_trading WHERE user_id = %s", (user_id,))
     res = cur.fetchone()
@@ -275,7 +275,7 @@ async def save_sources(request: Request, user_id: int = Form(...)):
         if not channels:
             return render_user_dashboard(request, user_id, "Aucun canal sélectionné.")
 
-        conn = psycopg2.connect(**DB_CONFIG)
+        conn = get_db_connection()
         cur = conn.cursor()
         
         # 1. On vide les anciennes sources pour éviter les conflits
