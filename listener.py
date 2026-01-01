@@ -1,4 +1,5 @@
 import asyncio
+import os
 import psycopg2
 import re
 from telethon import TelegramClient, events
@@ -7,13 +8,21 @@ from trading_engine import passer_ordre_sur_compte, API_TOKEN
 from metaapi_cloud_sdk import MetaApi
 
 # --- CONFIGURATION ---
-DB_CONFIG = {
-    "dbname": "copytrader_db",
-    "user": "imdade_user",
-    "password": "ton_mot_de_pass_ici", 
-    "host": "localhost",
-    "port": "5432"
-}
+DATABASE_URL = os.getenv('DATABASE_URL')
+
+def get_db_connection():
+    if DATABASE_URL:
+        # Connexion pour Railway (Cloud)
+        return psycopg2.connect(DATABASE_URL, sslmode='require')
+    else:
+        # Connexion pour ton ThinkPad (Local)
+        return psycopg2.connect(
+            dbname="copytrader_db",
+            user="imdade_user",
+            password="ton_mot_de_pass_ici", 
+            host="localhost",
+            port="5432"
+        )
 
 API_ID = 30882701
 API_HASH = 'ce3413ef77f883d43cc2629addb54790'
@@ -96,8 +105,8 @@ async def surveiller_profits_cloture():
             if api_meta is None:
                 await asyncio.sleep(2)
                 continue
-                
-            with psycopg2.connect(**DB_CONFIG) as conn:
+
+            with get_db_connection() as conn:
                 with conn.cursor() as cur:
                     cur.execute("SELECT id, ticket_id FROM bilan_trades WHERE profit <= 0.01 AND ticket_id IS NOT NULL")
                     trades_a_sync = cur.fetchall()
@@ -122,7 +131,7 @@ async def demarrer_bot():
     api_meta = MetaApi(API_TOKEN)
     
     try:
-        with psycopg2.connect(**DB_CONFIG) as conn_init:
+        with get_db_connection() as conn_init:
             with conn_init.cursor() as cur_init:
                 cur_init.execute("SELECT string_session FROM sessions_telegram LIMIT 1")
                 res = cur_init.fetchone()
@@ -139,7 +148,7 @@ async def demarrer_bot():
             msg_id_tague = event.reply_to_msg_id if event.is_reply else None
             action, symbole, tps_list, sl_initial, est_total, est_partiel = analyser_signal(event.raw_text)
 
-            with psycopg2.connect(**DB_CONFIG) as conn_h:
+            with get_db_connection() as conn_h:
                 with conn_h.cursor() as cur_h:
                     # Filtrage Source
                     cur_h.execute("SELECT user_id FROM sources WHERE canal_id = %s OR canal_id = %s", (str(event.chat_id), str(event.chat_id).replace("-100", "")))
