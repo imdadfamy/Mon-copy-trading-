@@ -301,7 +301,14 @@ async def save_sources(request: Request, user_id: int = Form(...)):
 
 
 if __name__ == "__main__":
-    # Railway définit automatiquement une variable d'environnement PORT
-    port = int(os.environ.get("PORT", 8000)) 
-    # Utilise host="0.0.0.0" pour être accessible depuis l'extérieur
+    import subprocess
+    import uvicorn
+    import os
+
+    # Cette ligne lance le bot (listener.py) en arrière-plan sur Railway
+    print("🚀 Démarrage du Bot de trading (Listener)...")
+    subprocess.Popen(["python", "listener.py"])
+
+    # Cette ligne lance votre site web
+    port = int(os.environ.get("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
