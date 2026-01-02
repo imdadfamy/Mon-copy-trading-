@@ -61,6 +61,12 @@ def corriger_prix_intelligent(prix_signale, prix_actuel):
 # --- PARSER ---
 def analyser_signal(texte):
     texte_clean = texte.upper().replace('\xa0', ' ').replace(':', ' ')
+    # SÉCURITÉ : Ignorer les messages de résultats/félicitations
+    mots_resultats = ["TARGET", "DONE", "COMPLETE", "PIPS", "PROFIT", "RUNNING"]
+    if any(w in texte_clean for w in mots_resultats):
+        # On vérifie si c'est juste un message de validation de TP
+        if "COMPLETE" in texte_clean or "DONE" in texte_clean or "PIPS" in texte_clean:
+            return None, None, [], None, False, False
     lignes = texte_clean.split('\n')
     
     est_fermeture = any(w in texte_clean for w in ["CLOSE", "FERMER", "FERMEZ", "EXIT", "CLÔTURE", "FERMÉE"])
@@ -129,7 +135,6 @@ async def demarrer_bot():
     global api_meta
     # On initialise l'API ici, une seule fois, après le démarrage de la loop
     api_meta = MetaApi(API_TOKEN)
-    
     try:
         with get_db_connection() as conn_init:
             with conn_init.cursor() as cur_init:
@@ -147,7 +152,10 @@ async def demarrer_bot():
             msg_id_actuel = event.id
             msg_id_tague = event.reply_to_msg_id if event.is_reply else None
             action, symbole, tps_list, sl_initial, est_total, est_partiel = analyser_signal(event.raw_text)
-
+         # SÉCURITÉ : SL OBLIGATOIRE
+            if action and (sl_initial is None or sl_initial <= 0):
+                print(f"⚠️ Signal {symbole} ignoré : Aucun Stop Loss (SL) détecté.")
+                return
             with get_db_connection() as conn_h:
                 with conn_h.cursor() as cur_h:
                     # Filtrage Source
